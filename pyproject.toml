@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "govbid"
 version = "0.1.0"
-description = "Add your description here"
+description = "Automated pipeline for discovering, analyzing, and drafting government software contract proposals using Google Gemini AI."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []
@@ -27,7 +27,7 @@ line-length = 88
 
 [tool.ruff.lint]
 # Enable Pyflakes (F), pycodestyle (E, W), isort (I), and flake8-bugbear (B)
-select = ["E", "F", "I", "B"]
+select = ["E", "W", "F", "I", "B"]
 ignore = []
 
 [tool.ruff.format]
@@ -38,9 +38,6 @@ indent-style = "space"
 # Note: ty is aggressive by default; this mimics strict mypy
 [tool.ty]
 # Type check all files in src and tests
-# check = ["src", "tests"]
-#Strictness settings
-# strict = true
 
 # --- PYTEST CONFIGURATION (Test Runner) ---
 [tool.pytest.ini_options]
