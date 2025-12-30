@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "govbid"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.5.1",
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.14.10",
+    "ty>=0.0.8",
+]
+
+# --- RUFF CONFIGURATION (Linter & Formatter) ---
+[tool.ruff]
+# Target version matches your project requirements
+target-version = "py312"
+line-length = 88
+
+[tool.ruff.lint]
+# Enable Pyflakes (F), pycodestyle (E, W), isort (I), and flake8-bugbear (B)
+select = ["E", "F", "I", "B"]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# --- TY CONFIGURATION (Type Checker) ---
+# Note: ty is aggressive by default; this mimics strict mypy
+[tool.ty]
+# Type check all files in src and tests
+# check = ["src", "tests"]
+#Strictness settings
+# strict = true
+
+# --- PYTEST CONFIGURATION (Test Runner) ---
+[tool.pytest.ini_options]
+addopts = "--cov=src --cov-report=term-missing"
+testpaths = ["tests"]
