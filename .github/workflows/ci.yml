@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main, infra]
+  pull_request:
+
+jobs:
+  quality:
+    name: Code Quality & Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Install uv (cached automatically)
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      # Run Checks
+      - name: Lint & Format (Ruff)
+        run: uv run ruff check --output-format=github .
+
+      - name: Check Formatting (Ruff)
+        run: uv run ruff format --check .
+
+      - name: Type Check (Ty)
+        run: uv run ty check
+
+      - name: Run Tests
+        run: uv run pytest
