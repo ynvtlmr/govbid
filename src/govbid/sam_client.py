@@ -2,8 +2,11 @@
 
 import asyncio
 import email.utils
+import json
 import logging
+import os
 import random
+import time
 from datetime import date, datetime
 from typing import List, Optional
 
@@ -11,6 +14,7 @@ import httpx
 
 from .config import settings
 from .exceptions import SamApiMaxRetriesError, SamApiRateLimitError
+from .history import HistoryManager
 from .models import OpportunityResponse
 
 logger = logging.getLogger(__name__)
@@ -48,6 +52,7 @@ class SamOpportunitiesClient:
             timeout=30.0,
             headers={"User-Agent": "GovBidToolkit/0.1.0"},
         )
+        self.history_manager = HistoryManager()
         # Limit concurrent requests to avoid overwhelming the server
         # Strictly sequential to be respectful and avoid 429s
         self._semaphore = asyncio.Semaphore(1)
@@ -165,6 +170,41 @@ class SamOpportunitiesClient:
         # Exponential backoff with jitter: 2, 4, 8, 16...
         return BASE_DELAY_SECONDS * (2**attempt) + random.uniform(0, 1)
 
+    def _save_raw_json(self, data: dict):
+        """Archive raw JSON response to disk."""
+        try:
+            os.makedirs(settings.SAM_RAW_DATA_DIR, exist_ok=True)
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S_%f")
+            filename = f"sam_opps_{timestamp}.json"
+            filepath = os.path.join(settings.SAM_RAW_DATA_DIR, filename)
+
+            with open(filepath, "w", encoding="utf-8") as f:
+                json.dump(data, f)
+        except Exception as e:
+            logger.warning(f"Failed to archive SAM JSON: {e}")
+
+    def _cleanup_old_archives(self):
+        """Delete archived JSON files older than retention period."""
+        try:
+            if not os.path.exists(settings.SAM_RAW_DATA_DIR):
+                return
+
+            cutoff_time = time.time() - (settings.RETENTION_DAYS * 86400)
+
+            for filename in os.listdir(settings.SAM_RAW_DATA_DIR):
+                filepath = os.path.join(settings.SAM_RAW_DATA_DIR, filename)
+                if os.path.isfile(filepath):
+                    # Check modification time
+                    if os.path.getmtime(filepath) < cutoff_time:
+                        try:
+                            os.remove(filepath)
+                        except OSError as e:
+                            logger.warning(
+                                f"Failed to delete old archive {filename}: {e}"
+                            )
+        except Exception as e:
+            logger.warning(f"Error during archive cleanup: {e}")
+
     async def search_opportunities(
         self,
         posted_from: date,
@@ -183,8 +223,12 @@ class SamOpportunitiesClient:
             pscs: Optional list of PSC codes to filter by.
 
         Returns:
-            List of unique opportunities matching the search criteria.
+            List of unique, previously unseen opportunities.
         """
+        # 1. Cleanup old history and archives
+        self.history_manager.cleanup_history()
+        self._cleanup_old_archives()
+
         base_params = {
             "api_key": self.api_key,
             "postedFrom": posted_from.strftime("%m/%d/%Y"),
@@ -223,13 +267,19 @@ class SamOpportunitiesClient:
             # res is now narrowed to List[OpportunityResponse]
             all_opportunities.extend(res)
 
-        # Deduplicate based on noticeId
-        seen_ids: set[str] = set()
+        # Deduplicate within this run AND against history
+        seen_ids = self.history_manager.load_seen_ids()
+        # Also track what we've seen in this current run to deal with overlaps between NAICS/PSC tasks
+        current_run_ids = set()
+
         unique_opportunities: List[OpportunityResponse] = []
         for opp in all_opportunities:
-            if opp.noticeId not in seen_ids:
+            # If we haven't seen it in history AND haven't seen it in this run
+            if opp.noticeId not in seen_ids and opp.noticeId not in current_run_ids:
                 unique_opportunities.append(opp)
-                seen_ids.add(opp.noticeId)
+                # Mark as seen
+                current_run_ids.add(opp.noticeId)
+                self.history_manager.mark_as_seen(opp.noticeId)
 
         return unique_opportunities
 
@@ -253,6 +303,9 @@ class SamOpportunitiesClient:
             try:
                 response = await self._request_with_retry(self.base_url, current_params)
                 data = response.json()
+
+                # Archive the raw data
+                self._save_raw_json(data)
 
                 if "opportunitiesData" not in data:
                     break

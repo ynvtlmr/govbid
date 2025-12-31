@@ -32,6 +32,11 @@ class Settings(BaseSettings):
 
     # CSV Archiving
     RAW_DATA_DIR: str = "data/canada_buys_raw"
+
+    # SAM.gov Archiving & History
+    SAM_RAW_DATA_DIR: str = "data/sam_gov_raw"
+    SAM_HISTORY_FILE: str = "data/sam_history.jsonl"
+
     RETENTION_DAYS: int = 60
 
     model_config = SettingsConfigDict(
