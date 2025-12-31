@@ -34,5 +34,13 @@ jobs:
       - name: Type Check (Ty)
         run: uv run ty check
 
-      - name: Run Tests
-        run: uv run pytest
+      - name: Run Unit Tests
+        run: uv run pytest -m "not integration"
+        env:
+          SAM_API_KEY: "test-dummy-key"
+
+      - name: Run Integration Tests
+        if: github.event_name == 'push'
+        run: uv run pytest -m integration
+        env:
+          SAM_API_KEY: ${{ secrets.SAM_API_KEY }}
