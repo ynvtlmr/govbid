@@ -24,6 +24,12 @@ class Settings(BaseSettings):
     # SAM API Base URL (production endpoint)
     SAM_BASE_URL: str = "https://api.sam.gov/prod/opportunities/v2/search"
 
+    # Canada Buys Settings
+    CANADA_BUYS_CSV_URL: str = "https://canadabuys.canada.ca/opendata/pub/newTenderNotice-nouvelAvisAppelOffres.csv"
+    # Target UNSPSC Codes (starting with)
+    # 8111: Computer services
+    TARGET_UNSPSC_PREFIXES: List[str] = ["8111"]
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
