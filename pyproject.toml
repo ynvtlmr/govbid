@@ -32,7 +32,7 @@ line-length = 88
 
 [tool.ruff.lint]
 # Enable Pyflakes (F), pycodestyle (E, W), isort (I), and flake8-bugbear (B)
-select = ["E", "W", "F", "I", "B"]
+select = ["E", "W", "F", "I", "B", "S"]
 ignore = []
 
 [tool.ruff.format]
