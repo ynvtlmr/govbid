@@ -91,12 +91,18 @@ asyncio.run(search())
 
 Configuration is managed via environment variables (loaded from `.env`):
 
-| Variable       | Description           | Default                |
-| -------------- | --------------------- | ---------------------- |
-| `SAM_API_KEY`  | Your SAM.gov API key  | Required               |
-| `TARGET_NAICS` | NAICS codes to filter | `541511,541512,541519` |
-| `TARGET_PSCS`  | PSC codes to filter   | `DA01,DA10`            |
-| `SAM_BASE_URL` | SAM.gov API endpoint  | Production URL         |
+| Variable                 | Description                        | Default                    |
+| ------------------------ | ---------------------------------- | -------------------------- |
+| `SAM_API_KEY`            | Your SAM.gov API key               | Required                   |
+| `TARGET_NAICS`           | NAICS codes to filter              | `541511,541512,541519`     |
+| `TARGET_PSCS`            | PSC codes to filter                | `DA01,DA10`                |
+| `SAM_BASE_URL`           | SAM.gov API endpoint               | Production URL             |
+| `CANADA_BUYS_CSV_URL`    | Canada Buys CSV feed URL           | Production URL             |
+| `TARGET_UNSPSC_PREFIXES` | UNSPSC code prefixes to filter     | `8111` (Computer services) |
+| `RAW_DATA_DIR`           | Canada Buys archive directory      | `data/canada_buys_raw`     |
+| `SAM_RAW_DATA_DIR`       | SAM.gov JSON archive directory     | `data/sam_gov_raw`         |
+| `SAM_HISTORY_FILE`       | Path to deduplication history file | `data/sam_history.jsonl`   |
+| `RETENTION_DAYS`         | Days to retain archived data       | `60`                       |
 
 ## Development
 

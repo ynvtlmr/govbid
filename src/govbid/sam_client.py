@@ -121,17 +121,22 @@ class SamOpportunitiesClient:
                 except httpx.HTTPStatusError as e:
                     # Retry on server errors too
                     if e.response.status_code >= 500:
-                        wait_time = BASE_DELAY_SECONDS * (2**attempt)
+                        wait_time = BASE_DELAY_SECONDS * (2**attempt) + random.uniform(
+                            0, 1
+                        )
                         logger.warning(
                             f"Server error {e.response.status_code}. "
-                            f"Retrying in {wait_time}s..."
+                            f"Retrying in {wait_time:.2f}s..."
                         )
                         await asyncio.sleep(wait_time)
                         continue
                     raise
                 except (httpx.RequestError, httpx.TimeoutException) as e:
-                    logger.warning(f"Request failed: {e}. Retrying...")
-                    await asyncio.sleep(BASE_DELAY_SECONDS * (2**attempt))
+                    wait_time = BASE_DELAY_SECONDS * (2**attempt) + random.uniform(0, 1)
+                    logger.warning(
+                        f"Request failed: {e}. Retrying in {wait_time:.2f}s..."
+                    )
+                    await asyncio.sleep(wait_time)
                     continue
 
             # If we exhaust retries
@@ -278,9 +283,12 @@ class SamOpportunitiesClient:
             # If we haven't seen it in history AND haven't seen it in this run
             if opp.noticeId not in seen_ids and opp.noticeId not in current_run_ids:
                 unique_opportunities.append(opp)
-                # Mark as seen
+                # Mark as seen for deduplication within this run
                 current_run_ids.add(opp.noticeId)
-                self.history_manager.mark_as_seen(opp.noticeId)
+
+        # Batch write all new IDs to history file (more efficient than per-item)
+        if current_run_ids:
+            self.history_manager.mark_many_as_seen(list(current_run_ids))
 
         return unique_opportunities
 

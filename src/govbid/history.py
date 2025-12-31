@@ -59,6 +59,26 @@ class HistoryManager:
         except Exception as e:
             logger.error(f"Error writing to history file: {e}")
 
+    def mark_many_as_seen(self, notice_ids: list[str]):
+        """Mark a list of notice IDs as seen by appending them to the history file.
+
+        This is more efficient than calling mark_as_seen() multiple times
+        as it performs a single file I/O operation.
+        """
+        if not notice_ids:
+            return
+
+        timestamp = time.time()
+        entries = [
+            json.dumps({"noticeId": notice_id, "timestamp": timestamp}) + "\n"
+            for notice_id in notice_ids
+        ]
+        try:
+            with open(self.history_file, "a", encoding="utf-8") as f:
+                f.writelines(entries)
+        except Exception as e:
+            logger.error(f"Error writing batch to history file: {e}")
+
     def cleanup_history(self, retention_days: int = settings.RETENTION_DAYS):
         """
         Rewrite the history file, removing entries older than retention_days.

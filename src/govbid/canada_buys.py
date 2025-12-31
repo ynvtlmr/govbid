@@ -123,15 +123,12 @@ def filter_software_opportunities(
         # We need to check if ANY of the codes match our formatting.
         codes = [code.strip().lstrip("*") for code in unspsc_text.splitlines()]
 
-        match_found = False
-        for code in codes:
-            for prefix in settings.TARGET_UNSPSC_PREFIXES:
-                if code.startswith(prefix):
-                    filtered.append(notice)
-                    match_found = True
-                    break
-            if match_found:
-                break
+        if any(
+            code.startswith(prefix)
+            for code in codes
+            for prefix in settings.TARGET_UNSPSC_PREFIXES
+        ):
+            filtered.append(notice)
     return filtered
 
 
