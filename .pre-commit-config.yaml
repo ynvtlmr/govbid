@@ -8,6 +8,11 @@ repos:
       # Run the formatter
       - id: ruff-format
 
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+
   - repo: local
     hooks:
       # Run ty locally using the uv environment

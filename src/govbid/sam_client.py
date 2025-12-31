@@ -29,6 +29,9 @@ MAX_RATE_LIMIT_WAIT_SECONDS = 60.0
 # Pagination safety limits
 SAFETY_OFFSET_LIMIT = 10000
 
+# Secure random number generator to satisfy security linters (S311)
+secure_random = random.SystemRandom()
+
 
 class SamOpportunitiesClient:
     """Async client for SAM.gov Get Opportunities Public API.
@@ -89,7 +92,7 @@ class SamOpportunitiesClient:
                     # Add a robust random delay before every request
                     # Ensures we never exceed ~0.3-0.5 req/sec
                     await asyncio.sleep(
-                        random.uniform(
+                        secure_random.uniform(
                             MIN_REQUEST_DELAY_SECONDS, MAX_REQUEST_DELAY_SECONDS
                         )
                     )
@@ -121,9 +124,9 @@ class SamOpportunitiesClient:
                 except httpx.HTTPStatusError as e:
                     # Retry on server errors too
                     if e.response.status_code >= 500:
-                        wait_time = BASE_DELAY_SECONDS * (2**attempt) + random.uniform(
-                            0, 1
-                        )
+                        wait_time = BASE_DELAY_SECONDS * (
+                            2**attempt
+                        ) + secure_random.uniform(0, 1)
                         logger.warning(
                             f"Server error {e.response.status_code}. "
                             f"Retrying in {wait_time:.2f}s..."
@@ -132,7 +135,9 @@ class SamOpportunitiesClient:
                         continue
                     raise
                 except (httpx.RequestError, httpx.TimeoutException) as e:
-                    wait_time = BASE_DELAY_SECONDS * (2**attempt) + random.uniform(0, 1)
+                    wait_time = BASE_DELAY_SECONDS * (
+                        2**attempt
+                    ) + secure_random.uniform(0, 1)
                     logger.warning(
                         f"Request failed: {e}. Retrying in {wait_time:.2f}s..."
                     )
@@ -173,7 +178,7 @@ class SamOpportunitiesClient:
                 )
 
         # Exponential backoff with jitter: 2, 4, 8, 16...
-        return BASE_DELAY_SECONDS * (2**attempt) + random.uniform(0, 1)
+        return BASE_DELAY_SECONDS * (2**attempt) + secure_random.uniform(0, 1)
 
     def _save_raw_json(self, data: dict):
         """Archive raw JSON response to disk."""
