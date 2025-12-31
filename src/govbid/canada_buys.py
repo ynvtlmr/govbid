@@ -6,18 +6,20 @@ software engineering opportunities.
 
 import csv
 import io
+import os
 import time
-from typing import Dict, List
+from datetime import datetime
+from typing import Dict, List, Optional
 
 import httpx
 
 from govbid.config import settings
 
 
-def fetch_new_tender_notices() -> List[Dict[str, str]]:
+def fetch_raw_csv() -> Optional[str]:
     """
-    Fetches the 'New Tender Notices' CSV from Canada Buys.
-    Returns a list of dictionaries, where each dict represents a row.
+    Fetches the raw 'New Tender Notices' CSV content from Canada Buys.
+    Returns the content string on success, None on failure.
     """
     try:
         # Add User-Agent to match typical browser or acceptable bot behavior
@@ -39,17 +41,67 @@ def fetch_new_tender_notices() -> List[Dict[str, str]]:
 
         # The CSV is encoded in utf-8-sig usually for Excel compatibility,
         # or just utf-8.
-        # We'll decode it and parse with csv module.
-        content = response.content.decode("utf-8-sig")
+        return response.content.decode("utf-8-sig")
 
-        reader = csv.DictReader(io.StringIO(content))
-        return list(reader)
     except httpx.RequestError as e:
         print(f"Error fetching Canada Buys CSV: {e}")
-        return []
+        return None
     except Exception as e:
-        print(f"Unexpected error parsing Canada Buys CSV: {e}")
+        print(f"Unexpected error fetching Canada Buys CSV: {e}")
+        return None
+
+
+def parse_csv(content: str) -> List[Dict[str, str]]:
+    """
+    Parses CSV content into a list of dictionaries.
+    """
+    try:
+        reader = csv.DictReader(io.StringIO(content))
+        return list(reader)
+    except Exception as e:
+        print(f"Error parsing CSV content: {e}")
         return []
+
+
+def save_raw_csv(content: str):
+    """
+    Saves the raw CSV content to a timestamped file.
+    """
+    try:
+        os.makedirs(settings.RAW_DATA_DIR, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        filename = f"canada_buys_tenders_{timestamp}.csv"
+        filepath = os.path.join(settings.RAW_DATA_DIR, filename)
+
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(content)
+        print(f"Archived raw CSV to: {filepath}")
+    except Exception as e:
+        print(f"Failed to archive raw CSV: {e}")
+
+
+def cleanup_old_files():
+    """
+    Deletes files in the raw data directory older than RETENTION_DAYS.
+    """
+    try:
+        if not os.path.exists(settings.RAW_DATA_DIR):
+            return
+
+        cutoff_time = time.time() - (settings.RETENTION_DAYS * 86400)
+
+        for filename in os.listdir(settings.RAW_DATA_DIR):
+            filepath = os.path.join(settings.RAW_DATA_DIR, filename)
+            if os.path.isfile(filepath):
+                file_mtime = os.path.getmtime(filepath)
+                if file_mtime < cutoff_time:
+                    try:
+                        os.remove(filepath)
+                        print(f"Deleted old archive file: {filename}")
+                    except OSError as e:
+                        print(f"Error deleting {filename}: {e}")
+    except Exception as e:
+        print(f"Error during cleanup of old files: {e}")
 
 
 def filter_software_opportunities(
@@ -85,23 +137,37 @@ def run_harvester_loop(interval_seconds: int = 7200):
     Runs the harvester loop indefinitely.
     """
     print(f"Starting Canada Buys Harvester. Polling every {interval_seconds} seconds.")
+    print(
+        f"Archiving to {settings.RAW_DATA_DIR} "
+        f"(Retention: {settings.RETENTION_DAYS} days)"
+    )
+
     while True:
-        print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Fetching notices...")
-        notices = fetch_new_tender_notices()
-        print(f"Fetched {len(notices)} notices.")
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting cycle...")
 
-        opportunities = filter_software_opportunities(notices)
-        print(f"Found {len(opportunities)} software engineering opportunities.")
+        # 1. Cleanup old files
+        cleanup_old_files()
 
-        for opp in opportunities:
-            title = opp.get("title-titre-eng", "No Title")
-            unspsc = opp.get("unspsc")
-            url = opp.get("noticeURL-URLavis-eng", "No URL")
-            print(f"  - {title} (UNSPSC: {unspsc})")
-            print(f"    Link: {url}")
+        # 2. Fetch
+        content = fetch_raw_csv()
+        if content:
+            # 3. Archive
+            save_raw_csv(content)
+
+            # 4. Parse & Process
+            notices = parse_csv(content)
+            print(f"Fetched {len(notices)} notices.")
+
+            opportunities = filter_software_opportunities(notices)
+            print(f"Found {len(opportunities)} software engineering opportunities.")
+
+            for opp in opportunities:
+                title = opp.get("title-titre-eng", "No Title")
+                unspsc = opp.get("unspsc")
+                url = opp.get("noticeURL-URLavis-eng", "No URL")
+                print(f"  - {title} (UNSPSC: {unspsc})")
+                print(f"    Link: {url}")
+        else:
+            print("Failed to fetch notices.")
 
         time.sleep(interval_seconds)
-
-
-if __name__ == "__main__":
-    run_harvester_loop()

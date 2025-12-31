@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     # 8111: Computer services
     TARGET_UNSPSC_PREFIXES: List[str] = ["8111"]
 
+    # CSV Archiving
+    RAW_DATA_DIR: str = "data/canada_buys_raw"
+    RETENTION_DAYS: int = 60
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
