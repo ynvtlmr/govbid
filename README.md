@@ -13,13 +13,16 @@ GovBid is a local desktop automation system that autonomously discovers, analyze
 ### Current Features
 
 - **SAM.gov API Client**: Search federal contract opportunities with rate limiting and retry logic
+- **Canada Buys Harvester**: Fetch and filter Canadian government tenders from CSV feed
 - **NAICS/PSC Filtering**: Target custom software development contracts (NAICS 541511, 541512, 541519)
+- **UNSPSC Filtering**: Target software services (Computer services 8111\*)
 - **Async Architecture**: Efficient async HTTP client with proper resource management
+- **History Tracking**: Deduplication via persistent JSONL history file
 
 ### Planned Features
 
 - SQLite database with SQLModel for bid tracking
-- RSS feed harvester for CanadaBuys and other sources
+- RSS feed harvester for additional sources
 - Gemini AI integration for bid relevance scoring
 - Streamlit dashboard for bid management
 - Automated proposal drafting
@@ -130,14 +133,18 @@ uv run pre-commit install
 govbid/
 ├── src/govbid/
 │   ├── __init__.py      # Package exports
+│   ├── canada_buys.py   # Canada Buys CSV harvester
 │   ├── config.py        # Configuration via pydantic-settings
 │   ├── exceptions.py    # Custom exception hierarchy
+│   ├── history.py       # Deduplication history manager
 │   ├── main.py          # CLI entry point
 │   ├── models.py        # Pydantic models for API responses
 │   └── sam_client.py    # SAM.gov API client
 ├── tests/
-│   ├── test_basic.py    # Basic tests
-│   └── test_models.py   # Model validation tests
+│   ├── test_basic.py       # Basic package tests
+│   ├── test_canada_buys.py # Canada Buys harvester tests
+│   ├── test_models.py      # Model validation tests
+│   └── test_sam_history.py # History manager tests
 ├── docs/
 │   ├── project_outline.md
 │   ├── project_plan.md

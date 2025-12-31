@@ -3,6 +3,8 @@ import os
 import time
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from govbid.config import settings
 from govbid.history import HistoryManager
 from govbid.sam_client import SamOpportunitiesClient
@@ -53,9 +55,6 @@ def test_history_cleanup(tmp_path):
         assert len(seen_ids) == 1
         assert "fresh" in seen_ids
         assert "old" not in seen_ids
-
-
-import pytest
 
 
 @pytest.mark.asyncio

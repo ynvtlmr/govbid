@@ -4,11 +4,14 @@ Handles persistent deduplication by tracking seen notice IDs in a JSONL file.
 """
 
 import json
+import logging
 import os
 import time
 from typing import Optional, Set
 
 from govbid.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class HistoryManager:
@@ -40,7 +43,7 @@ class HistoryManager:
                     except json.JSONDecodeError:
                         continue
         except Exception as e:
-            print(f"Error loading history file: {e}")
+            logger.error(f"Error loading history file: {e}")
 
         return seen_ids
 
@@ -54,7 +57,7 @@ class HistoryManager:
             with open(self.history_file, "a", encoding="utf-8") as f:
                 f.write(json.dumps(entry) + "\n")
         except Exception as e:
-            print(f"Error writing to history file: {e}")
+            logger.error(f"Error writing to history file: {e}")
 
     def cleanup_history(self, retention_days: int = settings.RETENTION_DAYS):
         """
@@ -88,12 +91,12 @@ class HistoryManager:
             # Replace original file with cleaned file
             os.replace(temp_file, self.history_file)
             if removed_count > 0:
-                print(
+                logger.info(
                     f"Cleaned up history: Removed {removed_count} old entries, "
                     f"kept {kept_count}."
                 )
 
         except Exception as e:
-            print(f"Error cleaning up history: {e}")
+            logger.error(f"Error cleaning up history: {e}")
             if os.path.exists(temp_file):
                 os.remove(temp_file)

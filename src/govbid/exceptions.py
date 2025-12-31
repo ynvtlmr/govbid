@@ -15,3 +15,11 @@ class SamApiRateLimitError(SamApiError):
 
 class SamApiMaxRetriesError(SamApiError):
     """Raised when max retries are exceeded."""
+
+
+class CanadaBuysError(GovBidError):
+    """Base exception for Canada Buys errors."""
+
+
+class CanadaBuysFetchError(CanadaBuysError):
+    """Raised when fetching CSV fails."""

@@ -6,6 +6,7 @@ software engineering opportunities.
 
 import csv
 import io
+import logging
 import os
 import time
 from datetime import datetime
@@ -14,6 +15,8 @@ from typing import Dict, List, Optional
 import httpx
 
 from govbid.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 def fetch_raw_csv() -> Optional[str]:
@@ -44,10 +47,10 @@ def fetch_raw_csv() -> Optional[str]:
         return response.content.decode("utf-8-sig")
 
     except httpx.RequestError as e:
-        print(f"Error fetching Canada Buys CSV: {e}")
+        logger.error(f"Error fetching Canada Buys CSV: {e}")
         return None
     except Exception as e:
-        print(f"Unexpected error fetching Canada Buys CSV: {e}")
+        logger.error(f"Unexpected error fetching Canada Buys CSV: {e}")
         return None
 
 
@@ -59,7 +62,7 @@ def parse_csv(content: str) -> List[Dict[str, str]]:
         reader = csv.DictReader(io.StringIO(content))
         return list(reader)
     except Exception as e:
-        print(f"Error parsing CSV content: {e}")
+        logger.error(f"Error parsing CSV content: {e}")
         return []
 
 
@@ -75,9 +78,9 @@ def save_raw_csv(content: str):
 
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(content)
-        print(f"Archived raw CSV to: {filepath}")
+        logger.info(f"Archived raw CSV to: {filepath}")
     except Exception as e:
-        print(f"Failed to archive raw CSV: {e}")
+        logger.error(f"Failed to archive raw CSV: {e}")
 
 
 def cleanup_old_files():
@@ -97,11 +100,11 @@ def cleanup_old_files():
                 if file_mtime < cutoff_time:
                     try:
                         os.remove(filepath)
-                        print(f"Deleted old archive file: {filename}")
+                        logger.info(f"Deleted old archive file: {filename}")
                     except OSError as e:
-                        print(f"Error deleting {filename}: {e}")
+                        logger.warning(f"Error deleting {filename}: {e}")
     except Exception as e:
-        print(f"Error during cleanup of old files: {e}")
+        logger.error(f"Error during cleanup of old files: {e}")
 
 
 def filter_software_opportunities(
@@ -136,14 +139,16 @@ def run_harvester_loop(interval_seconds: int = 7200):
     """
     Runs the harvester loop indefinitely.
     """
-    print(f"Starting Canada Buys Harvester. Polling every {interval_seconds} seconds.")
-    print(
+    logger.info(
+        f"Starting Canada Buys Harvester. Polling every {interval_seconds} seconds."
+    )
+    logger.info(
         f"Archiving to {settings.RAW_DATA_DIR} "
         f"(Retention: {settings.RETENTION_DAYS} days)"
     )
 
     while True:
-        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting cycle...")
+        logger.info("Starting cycle...")
 
         # 1. Cleanup old files
         cleanup_old_files()
@@ -156,18 +161,20 @@ def run_harvester_loop(interval_seconds: int = 7200):
 
             # 4. Parse & Process
             notices = parse_csv(content)
-            print(f"Fetched {len(notices)} notices.")
+            logger.info(f"Fetched {len(notices)} notices.")
 
             opportunities = filter_software_opportunities(notices)
-            print(f"Found {len(opportunities)} software engineering opportunities.")
+            logger.info(
+                f"Found {len(opportunities)} software engineering opportunities."
+            )
 
             for opp in opportunities:
                 title = opp.get("title-titre-eng", "No Title")
                 unspsc = opp.get("unspsc")
                 url = opp.get("noticeURL-URLavis-eng", "No URL")
-                print(f"  - {title} (UNSPSC: {unspsc})")
-                print(f"    Link: {url}")
+                logger.info(f"  - {title} (UNSPSC: {unspsc})")
+                logger.info(f"    Link: {url}")
         else:
-            print("Failed to fetch notices.")
+            logger.warning("Failed to fetch notices.")
 
         time.sleep(interval_seconds)

@@ -267,10 +267,11 @@ class SamOpportunitiesClient:
             # res is now narrowed to List[OpportunityResponse]
             all_opportunities.extend(res)
 
-        # Deduplicate within this run AND against history
+        # Deduplicate within this run AND against history.
         seen_ids = self.history_manager.load_seen_ids()
-        # Also track what we've seen in this current run to deal with overlaps between NAICS/PSC tasks
-        current_run_ids = set()
+        # Also track what we've seen in this current run to deal with
+        # overlaps between NAICS/PSC tasks.
+        current_run_ids: set[str] = set()
 
         unique_opportunities: List[OpportunityResponse] = []
         for opp in all_opportunities:
