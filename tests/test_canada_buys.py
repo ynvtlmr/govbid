@@ -2,6 +2,8 @@ import os
 import time
 from unittest.mock import MagicMock, patch
 
+import httpx
+
 from govbid.canada_buys import (
     cleanup_old_files,
     fetch_raw_csv,
@@ -56,6 +58,18 @@ def test_fetch_parse_filter():
 def test_fetch_error():
     with patch("govbid.canada_buys.httpx.get") as mock_get:
         mock_get.side_effect = Exception("Connection error")
+
+        content = fetch_raw_csv()
+        assert content is None
+
+
+def test_fetch_request_error():
+    """Test that httpx.RequestError is handled correctly."""
+    with patch("govbid.canada_buys.httpx.get") as mock_get:
+        mock_get.side_effect = httpx.RequestError(
+            "Connection refused",
+            request=httpx.Request("GET", settings.CANADA_BUYS_CSV_URL),
+        )
 
         content = fetch_raw_csv()
         assert content is None

@@ -90,29 +90,41 @@ async def test_sam_client_archiving_and_filtering(tmp_path):
 
         client.history_manager.mark_as_seen("opp1")
 
-        # Reset seen IDs from disk for second "run" logic simulation
-        # In real usage, search_opportunities() does the filtering.
-        # Let's mock a scenario where one ID is already in history.
+        # Test deduplication by calling search_opportunities directly
+        # with a mocked _fetch_all_pages that returns overlapping IDs
+        mock_response2 = MagicMock()
+        mock_response2.status_code = 200
+        mock_response2.json.return_value = {
+            "opportunitiesData": [
+                {
+                    "noticeId": "opp1",
+                    "title": "Already Seen",
+                    "postedDate": "2023-01-01",
+                },
+                {
+                    "noticeId": "opp2",
+                    "title": "New One",
+                    "postedDate": "2023-01-01",
+                },
+                {
+                    "noticeId": "opp3",
+                    "title": "Also New",
+                    "postedDate": "2023-01-01",
+                },
+            ]
+        }
 
-        all_opps = [
-            MagicMock(noticeId="opp1"),  # Seen
-            MagicMock(noticeId="opp2"),  # New (hypothetically)
-        ]
+        from datetime import date
 
-        # Mock load_seen_ids to return opp1
-        with patch.object(
-            client.history_manager, "load_seen_ids", return_value={"opp1"}
-        ):
-            # Manually test the deduplication logic block from search_opportunities
-            # (Partial duplication of logic for unit testing components)
-            seen_ids = client.history_manager.load_seen_ids()
-            current_run_ids = set()
-            unique_opportunities = []
+        with patch.object(client, "_request_with_retry", return_value=mock_response2):
+            opportunities = await client.search_opportunities(
+                posted_from=date(2023, 1, 1),
+                posted_to=date(2023, 1, 31),
+            )
 
-            for opp in all_opps:
-                if opp.noticeId not in seen_ids and opp.noticeId not in current_run_ids:
-                    unique_opportunities.append(opp)
-                    current_run_ids.add(opp.noticeId)
-
-            assert len(unique_opportunities) == 1
-            assert unique_opportunities[0].noticeId == "opp2"
+            # opp1 should be filtered (already seen), opp2 and opp3 remain
+            result_ids = {opp.noticeId for opp in opportunities}
+            assert "opp1" not in result_ids  # Already seen
+            assert "opp2" in result_ids
+            assert "opp3" in result_ids
+            assert len(opportunities) == 2

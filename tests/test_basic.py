@@ -1,6 +1,7 @@
 """Tests for the govbid package."""
 
 import pytest
+from pydantic import ValidationError
 
 from govbid import (
     GovBidError,
@@ -12,6 +13,7 @@ from govbid import (
     SearchResponse,
     settings,
 )
+from govbid.config import Settings
 
 
 class TestPackageImports:
@@ -80,3 +82,15 @@ class TestSettings:
         """SAM base URL should be configured."""
         assert settings.SAM_BASE_URL is not None
         assert "api.sam.gov" in settings.SAM_BASE_URL
+
+    def test_missing_sam_api_key_fails_validation(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Missing SAM_API_KEY should fail validation."""
+        # Remove SAM_API_KEY from environment completely
+        monkeypatch.delenv("SAM_API_KEY", raising=False)
+
+        with pytest.raises(ValidationError):
+            # Create a new Settings instance without SAM_API_KEY
+            # _env_file=None prevents loading from .env file
+            Settings(_env_file=None)  # type: ignore[call-arg]

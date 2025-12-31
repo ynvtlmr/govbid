@@ -51,8 +51,8 @@ def main() -> None:
         asyncio.run(run_search())
     except KeyboardInterrupt:
         logger.info("Search interrupted by user.")
-    except Exception as e:
-        logger.error(f"Search failed: {e}")
+    except Exception:
+        logger.exception("Search failed")
         raise
 
 

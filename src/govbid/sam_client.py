@@ -331,9 +331,15 @@ class SamOpportunitiesClient:
                     )
                     break
 
-            except Exception as e:
-                logger.error(f"Error fetching opportunities pages: {e}")
-                # If a page fails after retries, we likely should stop this chain
+            except (SamApiRateLimitError, SamApiMaxRetriesError) as e:
+                logger.error(f"SAM API error fetching pages: {e}")
+                # If rate limited or max retries exceeded, stop pagination
+                break
+            except httpx.HTTPStatusError as e:
+                logger.error(f"HTTP error fetching pages: {e}")
+                break
+            except httpx.RequestError as e:
+                logger.error(f"Request error fetching pages: {e}")
                 break
 
         return results
