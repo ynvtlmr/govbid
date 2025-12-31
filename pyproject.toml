@@ -34,6 +34,7 @@ line-length = 88
 # Enable Pyflakes (F), pycodestyle (E, W), isort (I), and flake8-bugbear (B)
 select = ["E", "W", "F", "I", "B", "S"]
 ignore = []
+per-file-ignores = {"tests/**" = ["S101"]}
 
 [tool.ruff.format]
 quote-style = "double"
