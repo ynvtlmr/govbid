@@ -37,7 +37,7 @@ jobs:
       - name: Run Unit Tests
         run: uv run pytest -m "not integration"
         env:
-          SAM_API_KEY: "test-dummy-key"
+          SAM_API_KEY: "test-dummy-key" # pragma: allowlist secret
 
       - name: Run Integration Tests
         if: github.event_name == 'push'
